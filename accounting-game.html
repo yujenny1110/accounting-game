@@ -1,103 +1,375 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>借貸法則學習遊戲</title>
-<style>
-  body { font-family: 'Noto Sans TC', sans-serif; background:#f6f7fb; margin:0; color:#222; }
-  header { background:#3b82f6; color:#fff; padding:24px; text-align:center; }
-  main { max-width:1000px; margin:0 auto; padding:24px; }
-  .card { background:#fff; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:24px; margin-bottom:20px; }
-  .center { text-align:center; }
-  button { border:0; border-radius:10px; padding:12px 24px; font-size:1.1rem; cursor:pointer; }
-  .btn-primary { background:#16a34a; color:#fff; }
-  .btn-secondary { background:#0ea5e9; color:#fff; }
-  .hidden { display:none; }
-  table { width:100%; border-collapse:collapse; margin:8px 0; }
-  th,td { border:1px solid #e5e7eb; padding:8px 10px; text-align:right; }
-  th:first-child,td:first-child { text-align:left; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>借貸法則學習遊戲（含期初餘額 & 答對計數）</title>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#222;--muted:#6b7280;--blue:#3b82f6;--green:#16a34a;--cyan:#0ea5e9;--red:#ef4444}
+    *{box-sizing:border-box}
+    body{font-family:'Noto Sans TC',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';background:var(--bg);margin:0;color:var(--text)}
+    header{background:var(--blue);color:#fff;padding:24px;text-align:center}
+    main{max-width:1000px;margin:0 auto;padding:24px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:24px;margin-bottom:20px}
+    .center{text-align:center}
+    button{border:0;border-radius:10px;padding:12px 20px;font-size:1.05rem;cursor:pointer}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-secondary{background:var(--cyan);color:#fff}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid #e5e7eb}
+    .hidden{display:none}
+    table{width:100%;border-collapse:collapse;margin:8px 0}
+    th,td{border:1px solid #e5e7eb;padding:8px 10px;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    small{color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .grow{flex:1;min-width:220px}
+    select,input{width:100%;padding:10px;border-radius:10px;border:1px solid #e5e7eb}
+    .kpi{display:flex;gap:12px;flex-wrap:wrap}
+    .pill{background:#eef2ff;color:#1e40af;padding:6px 10px;border-radius:999px}
+    .ok{color:var(--green)}.bad{color:var(--red)}
+  </style>
 </head>
 <body>
 <header>
   <h1>借貸法則學習遊戲</h1>
 </header>
 <main>
+  <!-- ===== 首頁區 ===== -->
   <div id="home" class="card center">
     <h2>🎯 遊戲說明</h2>
     <p>這是一個幫助你學習 <strong>借貸法則</strong> 的小遊戲。每一題會出現一筆交易，請你選擇正確的借方與貸方科目及金額。</p>
-    <ul style="text-align:left;display:inline-block;">
-      <li>題目數量：10 題（二分錄）</li>
-      <li>答對可得分，連續答對會有加成</li>
-      <li>遊戲結束後會自動產出 <strong>損益表</strong> 和 <strong>資產負債表</strong></li>
+    <ul style="text-align:left;display:inline-block;line-height:1.9">
+      <li>題目數量：10 題（二分錄，不重複）</li>
+      <li>答對 +100 分，連勝每題額外 +20 分</li>
+      <li>答錯不扣分，但連勝歸零</li>
+      <li>結束將產出 <strong>損益表</strong> 與 <strong>資產負債表</strong>，含期初餘額</li>
     </ul>
-    <p><button id="startBtn" class="btn-primary">開始遊戲</button></p>
+    <p>
+      <button id="startBtn" class="btn-primary">開始遊戲</button>
+      <button id="howBtn" class="btn-ghost">顯示/隱藏規則</button>
+    </p>
+    <div id="rules" class="hidden" style="max-width:920px;margin:0 auto;text-align:left">
+      <div class="card">
+        <h3>📌 借貸速記</h3>
+        <p>資產/費損：<b>借增貸減</b>；負債/權益/收益：<b>貸增借減</b>。</p>
+      </div>
+      <div class="card">
+        <h3>🏁 期初資產負債表餘額（遊戲開始前就存在）</h3>
+        <div class="row">
+          <div class="grow">
+            <table>
+              <tr><th>資產</th><th>金額</th></tr>
+              <tr><td>現金</td><td>10,000</td></tr>
+              <tr><td>應收帳款</td><td>5,000</td></tr>
+              <tr><td>存貨</td><td>2,000</td></tr>
+            </table>
+          </div>
+          <div class="grow">
+            <table>
+              <tr><th>負債</th><th>金額</th></tr>
+              <tr><td>應付帳款</td><td>1,000</td></tr>
+              <tr><td>短期銀行借款</td><td>5,000</td></tr>
+              <tr><th>權益</th><th>金額</th></tr>
+              <tr><td>股本</td><td>5,000</td></tr>
+              <tr><td>保留盈餘</td><td>6,000</td></tr>
+            </table>
+          </div>
+        </div>
+        <small>提示：期末權益＝期初權益＋本期淨利（或－淨損）。</small>
+      </div>
+    </div>
   </div>
 
+  <!-- ===== 遊戲區 ===== -->
   <div id="game" class="hidden">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-          <span>分數：<b id="score">0</b></span>｜
-          <span>連續答對：<b id="streak">0</b></span>｜
-          <span>剩餘題數：<b id="remaining">10</b></span>
+      <div class="row" style="justify-content:space-between">
+        <div class="kpi">
+          <span class="pill">分數：<b id="score">0</b></span>
+          <span class="pill">答對：<b id="correct">0</b></span>
+          <span class="pill">連勝：<b id="streak">0</b></span>
+          <span class="pill">剩餘題數：<b id="remaining">10</b></span>
         </div>
         <small>資產/費損「借增貸減」，負債/權益/收益「貸增借減」</small>
       </div>
       <hr>
-      <p id="prompt"></p>
-      <div>
-        <label>借方科目</label>
-        <select id="debitAcc"></select>
-        <label>借方金額</label>
-        <input id="debitAmt" type="number" min="1" step="1">
+      <p id="prompt" style="font-size:1.1rem"></p>
+      <div class="row">
+        <div class="grow">
+          <label>借方科目</label>
+          <select id="debitAcc"></select>
+        </div>
+        <div style="width:160px">
+          <label>借方金額</label>
+          <input id="debitAmt" type="number" min="1" step="1">
+        </div>
       </div>
-      <div style="margin-top:10px;">
-        <label>貸方科目</label>
-        <select id="creditAcc"></select>
-        <label>貸方金額</label>
-        <input id="creditAmt" type="number" min="1" step="1">
+      <div class="row" style="margin-top:8px">
+        <div class="grow">
+          <label>貸方科目</label>
+          <select id="creditAcc"></select>
+        </div>
+        <div style="width:160px">
+          <label>貸方金額</label>
+          <input id="creditAmt" type="number" min="1" step="1">
+        </div>
       </div>
-      <div style="margin-top:16px;">
-        <button id="submitBtn" class="btn-primary">送出</button>
-        <button id="hintBtn" class="btn-secondary">提示</button>
+      <div class="row" style="margin-top:16px">
+        <button id="submitBtn" class="btn-primary">送出（Enter）</button>
+        <button id="hintBtn" class="btn-secondary">提示（H）</button>
+        <button id="skipBtn" class="btn-ghost">跳過此題</button>
       </div>
-      <div id="feedback" style="margin-top:10px;color:#555;"></div>
+      <div id="feedback" style="margin-top:12px;color:#555"></div>
     </div>
 
     <div id="reports" class="hidden card">
       <h2>📊 期末報表</h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:280px;">
+      <div class="row">
+        <div class="grow">
           <h3>損益表</h3>
           <div id="is"></div>
         </div>
-        <div style="flex:1;min-width:280px;">
+        <div class="grow">
           <h3>資產負債表</h3>
           <div id="bs"></div>
         </div>
       </div>
+      <div id="check" style="margin-top:8px"></div>
+      <div style="margin-top:16px">
+        <button id="againBtn" class="btn-primary">再玩一次</button>
+      </div>
     </div>
   </div>
 </main>
-<script>
-const accounts=[{name:"現金",type:"資產",normal:"借"},{name:"應收帳款",type:"資產",normal:"借"},{name:"存貨",type:"資產",normal:"借"},{name:"設備",type:"資產",normal:"借"},{name:"應付帳款",type:"負債",normal:"貸"},{name:"股本",type:"權益",normal:"貸"},{name:"餐飲收入",type:"收益",normal:"貸"},{name:"客房收入",type:"收益",normal:"貸"},{name:"薪資費用",type:"費損",normal:"借"},{name:"水電費用",type:"費損",normal:"借"},{name:"銷貨成本",type:"費損",normal:"借"}];
-const typeRule={"資產":{inc:"借",dec:"貸"},"負債":{inc:"貸",dec:"借"},"權益":{inc:"貸",dec:"借"},"收益":{inc:"貸",dec:"借"},"費損":{inc:"借",dec:"貸"}};
-const questions=[{text:"以現金 $X 購入存貨。",debit:"存貨",credit:"現金"},{text:"現金收客房收入 $X。",debit:"現金",credit:"客房收入"},{text:"支付薪資 $X（現金）。",debit:"薪資費用",credit:"現金"},{text:"支付水電費 $X（現金）。",debit:"水電費用",credit:"現金"},{text:"收到股東現金投入 $X。",debit:"現金",credit:"股本"},{text:"賒購存貨 $X。",debit:"存貨",credit:"應付帳款"},{text:"償還應付帳款 $X（現金）。",debit:"應付帳款",credit:"現金"},{text:"以現金 $X 購入設備。",debit:"設備",credit:"現金"},{text:"銷貨成本 $X（存貨轉成本）。",debit:"銷貨成本",credit:"存貨"},{text:"現金收餐飲收入 $X。",debit:"現金",credit:"餐飲收入"}];
-let idx=-1,amount=0,score=0,streak=0,remaining=10;const ledger={};accounts.forEach(a=>ledger[a.name]={debit:0,credit:0,type:a.type,normal:a.normal});
-const debitSel=document.getElementById('debitAcc'),creditSel=document.getElementById('creditAcc'),debitAmt=document.getElementById('debitAmt'),creditAmt=document.getElementById('creditAmt'),promptEl=document.getElementById('prompt'),feedback=document.getElementById('feedback'),scoreEl=document.getElementById('score'),streakEl=document.getElementById('streak'),remainingEl=document.getElementById('remaining');
-accounts.forEach(a=>{let o1=document.createElement('option');o1.value=a.name;o1.textContent=a.name;debitSel.appendChild(o1);let o2=document.createElement('option');o2.value=a.name;o2.textContent=a.name;creditSel.appendChild(o2);});
-function randAmount(){return Math.floor(Math.random()*9+2)*100;}
-function nextQ(){idx=Math.floor(Math.random()*questions.length);amount=randAmount();promptEl.textContent=questions[idx].text.replace('$X','$'+amount.toLocaleString());debitAmt.value=amount;creditAmt.value=amount;feedback.textContent='';}
-function postLedger(d,da,c,ca){ledger[d].debit+=da;ledger[c].credit+=ca;}
-function getAcc(name){return accounts.find(a=>a.name===name);}
-function check(){const d=debitSel.value,c=creditSel.value,da=parseInt(debitAmt.value||'0'),ca=parseInt(creditAmt.value||'0');if(!d||!c||!da||!ca){feedback.textContent='請輸入完整資料';return;}if(da!==ca){feedback.textContent='借貸金額需相等';return;}const ans=questions[idx];if(d===ans.debit&&c===ans.credit){score+=100;scoreEl.textContent=score;postLedger(d,da,c,ca);remaining--;remainingEl.textContent=remaining;feedback.style.color='#16a34a';feedback.textContent='✅ 正確！';if(remaining===0){endGame();}else{nextQ();}}else{feedback.style.color='red';feedback.textContent='❌ 再試一次！';}}
-function calcBalances(){const assets=[],liabs=[],eq=[],rev=[],exp=[];let ta=0,tl=0,te=0,tr=0,tx=0;for(const [n,v]of Object.entries(ledger)){const m=getAcc(n);let bal=m.normal==='借'?v.debit-v.credit:v.credit-v.debit;if(Math.abs(bal)<1)continue;const a=Math.abs(bal);if(m.type==='資產'){assets.push([n,a]);ta+=a;}else if(m.type==='負債'){liabs.push([n,a]);tl+=a;}else if(m.type==='權益'){eq.push([n,a]);te+=a;}else if(m.type==='收益'){rev.push([n,a]);tr+=a;}else if(m.type==='費損'){exp.push([n,a]);tx+=a;}}return{assets,liabs,eq,rev,exp,ta,tl,te,tr,tx,ni:tr-tx};}
-function endGame(){document.getElementById('game').scrollIntoView();feedback.textContent='遊戲結束！以下是你的報表';const r=calcBalances();const isHTML=`<table><tr><th>項目</th><th>金額</th></tr><tr><td>收入合計</td><td>${r.tr}</td></tr><tr><td>費用與成本</td><td>${r.tx}</td></tr><tr><td>稅前淨利</td><td>${r.ni}</td></tr></table>`;const bsA=r.assets.map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td></tr>`).join('')+`<tr><td>資產合計</td><td>${r.ta}</td></tr>`;const bsL=r.liabs.map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td></tr>`).join('')+`<tr><td>負債合計</td><td>${r.tl}</td></tr>`;const bsE=r.eq.map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td></tr>`).join('')+`<tr><td>保留盈餘(期末)</td><td>${r.ni}</td></tr><tr><td>權益合計</td><td>${r.te+r.ni}</td></tr>`;document.getElementById('is').innerHTML=isHTML;document.getElementById('bs').innerHTML=`<div style='display:flex;gap:10px;'><div style='flex:1'><table><tr><th>資產</th><th>金額</th></tr>${bsA}</table></div><div style='flex:1'><table><tr><th>負債</th><th>金額</th></tr>${bsL}<tr><th>權益</th><th>金額</th></tr>${bsE}</table></div></div>`;document.getElementById('reports').classList.remove('hidden');}
 
-document.getElementById('submitBtn').onclick=check;document.getElementById('hintBtn').onclick=()=>{const ans=questions[idx];feedback.textContent=`提示：借 ${ans.debit}；貸 ${ans.credit}`;};document.getElementById('startBtn').onclick=()=>{document.getElementById('home').classList.add('hidden');document.getElementById('game').classList.remove('hidden');nextQ();};
+<script>
+// ===== 科目與規則 =====
+const accounts = [
+  {name:"現金",type:"資產",normal:"借"},
+  {name:"應收帳款",type:"資產",normal:"借"},
+  {name:"存貨",type:"資產",normal:"借"},
+  {name:"設備",type:"資產",normal:"借"},
+  {name:"應付帳款",type:"負債",normal:"貸"},
+  {name:"短期銀行借款",type:"負債",normal:"貸"}, // 新增
+  {name:"股本",type:"權益",normal:"貸"},
+  {name:"保留盈餘",type:"權益",normal:"貸"}, // 新增
+  {name:"餐飲收入",type:"收益",normal:"貸"},
+  {name:"客房收入",type:"收益",normal:"貸"},
+  {name:"薪資費用",type:"費損",normal:"借"},
+  {name:"水電費用",type:"費損",normal:"借"},
+  {name:"銷貨成本",type:"費損",normal:"借"},
+];
+
+const typeRule = {
+  "資產": {inc:"借", dec:"貸"},
+  "負債": {inc:"貸", dec:"借"},
+  "權益": {inc:"貸", dec:"借"},
+  "收益": {inc:"貸", dec:"借"},
+  "費損": {inc:"借", dec:"貸"}
+};
+
+// ===== 題庫 =====
+const baseQuestions = [
+  {text:"以現金 $X 購入存貨。", debit:"存貨", credit:"現金"},
+  {text:"現金收客房收入 $X。", debit:"現金", credit:"客房收入"},
+  {text:"支付薪資 $X（現金）。", debit:"薪資費用", credit:"現金"},
+  {text:"支付水電費 $X（現金）。", debit:"水電費用", credit:"現金"},
+  {text:"收到股東現金投入 $X。", debit:"現金", credit:"股本"},
+  {text:"賒購存貨 $X。", debit:"存貨", credit:"應付帳款"},
+  {text:"償還應付帳款 $X（現金）。", debit:"應付帳款", credit:"現金"},
+  {text:"以現金 $X 購入設備。", debit:"設備", credit:"現金"},
+  {text:"銷貨成本 $X（存貨轉成本）。", debit:"銷貨成本", credit:"存貨"},
+  {text:"現金收餐飲收入 $X。", debit:"現金", credit:"餐飲收入"},
+];
+
+// ===== 期初餘額（正數代表其「正常方向」的餘額） =====
+const opening = {
+  "現金": 10000,
+  "應收帳款": 5000,
+  "存貨": 2000,
+  "應付帳款": 1000,
+  "短期銀行借款": 5000,
+  "股本": 5000,
+  "保留盈餘": 6000,
+};
+
+// ===== 狀態 =====
+let quiz = [];
+let idx = -1, amount = 0, score = 0, streak = 0, correct = 0;
+const ledger = {};
+accounts.forEach(a => ledger[a.name] = {debit:0, credit:0, type:a.type, normal:a.normal});
+
+// ===== DOM =====
+const debitSel = document.getElementById('debitAcc');
+const creditSel = document.getElementById('creditAcc');
+const debitAmt = document.getElementById('debitAmt');
+const creditAmt = document.getElementById('creditAmt');
+const promptEl = document.getElementById('prompt');
+const feedback = document.getElementById('feedback');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+const remainingEl = document.getElementById('remaining');
+const correctEl = document.getElementById('correct');
+
+// ===== 初始化下拉 =====
+accounts.forEach(a => {
+  const o1 = document.createElement('option'); o1.value = a.name; o1.textContent = a.name; debitSel.appendChild(o1);
+  const o2 = document.createElement('option'); o2.value = a.name; o2.textContent = a.name; creditSel.appendChild(o2);
+});
+
+// ===== 工具 =====
+const fmt = n => Number(n).toLocaleString('zh-Hant-TW');
+const randAmount = () => Math.floor(Math.random()*9 + 2) * 100; // 200~1100
+const shuffle = arr => arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+
+function getAcc(name){ return accounts.find(a => a.name === name); }
+
+function seedOpeningBalances(){
+  // 依正常方向寫入期初餘額
+  for(const [name,amt] of Object.entries(opening)){
+    const acc = getAcc(name);
+    if(!acc || !amt) continue;
+    if(acc.normal === '借') ledger[name].debit += amt; else ledger[name].credit += amt;
+  }
+}
+
+function resetGame(){
+  Object.keys(ledger).forEach(k=>{ ledger[k].debit=0; ledger[k].credit=0; });
+  score = 0; streak = 0; correct = 0; idx = -1; amount = 0;
+  scoreEl.textContent = 0; streakEl.textContent = 0; correctEl.textContent = 0; remainingEl.textContent = 10;
+  feedback.textContent = '';
+  seedOpeningBalances(); // 帶入期初
+  quiz = shuffle(baseQuestions).slice(0,10);
+}
+
+function nextQ(){
+  idx += 1;
+  if(idx >= quiz.length){ endGame(); return; }
+  amount = randAmount();
+  const q = quiz[idx];
+  promptEl.textContent = q.text.replace('$X', '$' + fmt(amount));
+  debitAmt.value = amount; creditAmt.value = amount;
+  debitSel.value = accounts[0].name; creditSel.value = accounts[1].name;
+  feedback.style.color = '#555'; feedback.textContent = '';
+  remainingEl.textContent = quiz.length - idx; // 含本題
+}
+
+function postLedger(d, da, c, ca){ ledger[d].debit += da; ledger[c].credit += ca; }
+
+function check(){
+  const d = debitSel.value, c = creditSel.value,
+        da = parseInt(debitAmt.value||'0'), ca = parseInt(creditAmt.value||'0');
+  if(!d || !c || !da || !ca){ feedback.style.color = 'var(--red)'; feedback.textContent = '請輸入完整資料'; return; }
+  if(d === c){ feedback.style.color = 'var(--red)'; feedback.textContent = '借方與貸方科目不可相同'; return; }
+  if(da !== ca){ feedback.style.color = 'var(--red)'; feedback.textContent = '借貸金額需相等'; return; }
+  const ans = quiz[idx];
+  if(d === ans.debit && c === ans.credit){
+    // 計分：100 + 連勝*20，並統計答對題數
+    const add = 100 + (streak * 20);
+    score += add; streak += 1; correct += 1;
+    scoreEl.textContent = fmt(score); streakEl.textContent = streak; correctEl.textContent = correct;
+    postLedger(d, da, c, ca);
+    feedback.style.color = 'var(--green)';
+    feedback.textContent = `✅ 正確！本題 +${fmt(add)} 分（連勝 ${streak-1} ➜ ${streak}）`;
+    nextQ();
+  } else {
+    // 錯誤提示
+    const dType = getAcc(d)?.type, cType = getAcc(c)?.type;
+    const hintBits = [];
+    if(dType) hintBits.push(`借方「${d}」屬「${dType}」，${typeRule[dType].inc}增${typeRule[dType].dec}減`);
+    if(cType) hintBits.push(`貸方「${c}」屬「${cType}」，${typeRule[cType].inc}增${typeRule[cType].dec}減`);
+    feedback.style.color = 'var(--red)';
+    feedback.innerHTML = `❌ 再試一次！<br><small>${hintBits.join('； ')}</small>`;
+    streak = 0; streakEl.textContent = 0;
+  }
+}
+
+function calcBalances(){
+  const assets=[], liabs=[], eq=[], rev=[], exp=[];
+  let ta=0, tl=0, te=0, tr=0, tx=0;
+  for(const [n,v] of Object.entries(ledger)){
+    const m = getAcc(n);
+    let bal = m.normal==='借' ? v.debit - v.credit : v.credit - v.debit;
+    if(Math.abs(bal) < 1) continue;
+    const a = Math.abs(bal);
+    if(m.type==='資產'){ assets.push([n,a]); ta+=a; }
+    else if(m.type==='負債'){ liabs.push([n,a]); tl+=a; }
+    else if(m.type==='權益'){ eq.push([n,a]); te+=a; }
+    else if(m.type==='收益'){ rev.push([n,a]); tr+=a; }
+    else if(m.type==='費損'){ exp.push([n,a]); tx+=a; }
+  }
+  return {assets,liabs,eq,rev,exp,ta,tl,te,tr,tx,ni: tr - tx};
+}
+
+function endGame(){
+  document.getElementById('game').scrollIntoView({behavior:'smooth'});
+  const r = calcBalances();
+
+  // 損益表
+  const revRows = r.rev.map(([n,a])=>`<tr><td>${n}</td><td>${fmt(a)}</td></tr>`).join('') || '<tr><td>（無）</td><td>0</td></tr>';
+  const expRows = r.exp.map(([n,a])=>`<tr><td>${n}</td><td>${fmt(a)}</td></tr>`).join('') || '<tr><td>（無）</td><td>0</td></tr>';
+  const isHTML = `
+    <table>
+      <tr><th>收入</th><th>金額</th></tr>
+      ${revRows}
+      <tr><td><b>收入合計</b></td><td><b>${fmt(r.tr)}</b></td></tr>
+      <tr><th>費用與成本</th><th>金額</th></tr>
+      ${expRows}
+      <tr><td><b>費用與成本合計</b></td><td><b>${fmt(r.tx)}</b></td></tr>
+      <tr><td><b>稅前淨利</b></td><td><b>${fmt(r.ni)}</b></td></tr>
+    </table>`;
+
+  // 資產負債表
+  const bsA = r.assets.map(a=>`<tr><td>${a[0]}</td><td>${fmt(a[1])}</td></tr>`).join('') +
+              `<tr><td><b>資產合計</b></td><td><b>${fmt(r.ta)}</b></td></tr>`;
+  const bsL = r.liabs.map(a=>`<tr><td>${a[0]}</td><td>${fmt(a[1])}</td></tr>`).join('') +
+              `<tr><td><b>負債合計</b></td><td><b>${fmt(r.tl)}</b></td></tr>`;
+  const bsE = r.eq.map(a=>`<tr><td>${a[0]}</td><td>${fmt(a[1])}</td></tr>`).join('') +
+              `<tr><td>本期損益結轉（保留盈餘）</td><td>${fmt(r.ni)}</td></tr>` +
+              `<tr><td><b>權益合計</b></td><td><b>${fmt(r.te + r.ni)}</b></td></tr>`;
+
+  document.getElementById('is').innerHTML = isHTML;
+  document.getElementById('bs').innerHTML = `
+    <div style='display:flex;gap:10px;flex-wrap:wrap'>
+      <div class='grow'><table><tr><th>資產</th><th>金額</th></tr>${bsA}</table></div>
+      <div class='grow'><table><tr><th>負債</th><th>金額</th></tr>${bsL}<tr><th>權益</th><th>金額</th></tr>${bsE}</table></div>
+    </div>`;
+
+  const rhs = r.tl + r.te + r.ni;
+  const ok = r.ta === rhs;
+  document.getElementById('check').innerHTML = ok
+    ? `<span class='ok'>✅ 檢查通過：</span>資產 ${fmt(r.ta)} ＝ 負債 ${fmt(r.tl)} ＋ 權益 ${fmt(r.te + r.ni)}`
+    : `<span class='bad'>⚠️ 不平衡：</span>資產 ${fmt(r.ta)} vs. 負債＋權益 ${fmt(rhs)}`;
+
+  document.getElementById('reports').classList.remove('hidden');
+}
+
+// ===== 事件 =====
+function showHint(){
+  const ans = quiz[idx];
+  feedback.style.color = '#555';
+  feedback.textContent = `提示：借 ${ans.debit}；貸 ${ans.credit}`;
+}
+
+document.getElementById('submitBtn').onclick = check;
+document.getElementById('hintBtn').onclick = showHint;
+document.getElementById('skipBtn').onclick = ()=>{ streak = 0; streakEl.textContent = 0; nextQ(); };
+document.getElementById('againBtn').onclick = ()=>{ resetGame(); nextQ(); window.scrollTo({top:0,behavior:'smooth'}); };
+
+document.getElementById('startBtn').onclick = ()=>{
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  resetGame();
+  nextQ();
+};
+
+document.getElementById('howBtn').onclick = ()=>{ document.getElementById('rules').classList.toggle('hidden'); };
+
+// 快捷鍵：Enter 送出，H 顯示提示
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); check(); }
+  if(e.key.toLowerCase() === 'h'){ e.preventDefault(); showHint(); }
+});
 </script>
 </body>
 </html>
-
